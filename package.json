@@ -1,0 +1,13 @@
+{
+  "name": "tavus-audio-passthrough",
+  "version": "1.0.0",
+  "description": "Audio passthrough to Tavus video replica",
+  "type": "module",
+  "scripts": {
+    "start": "node launcher.js",
+    "dev": "node launcher.js"
+  },
+  "keywords": ["tavus", "pipecat", "daily", "video", "audio"],
+  "author": "",
+  "license": "MIT"
+}

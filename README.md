@@ -2,6 +2,25 @@
 
 This project demonstrates how to pipe incoming audio directly to Tavus in Pipecat, bypassing the typical TTS pipeline. This is useful when you want to synchronize a user's voice directly with a Tavus video replica instead of using synthesized speech.
 
+## Quick Reference
+
+```bash
+# Install everything
+pip install -r requirements.txt
+npm install
+cd frontend && npm install && cd ..
+
+# Configure .env with your credentials
+cp .env.example .env
+
+# Run everything
+npm start
+
+# Then:
+# - Open http://localhost:3000 to view the replica
+# - Join your Daily room to provide audio input
+```
+
 ## Overview
 
 The typical Pipecat pipeline with Tavus looks like:
@@ -24,48 +43,157 @@ Input → Tavus (video animation only)
 
 ## Features
 
+- **Unified Launcher Script**: Single command to start everything (`npm start`)
+- **Auto-Reconnection**: Automatically restarts and creates new rooms on disconnection
 - Direct audio passthrough to Tavus replica
 - No speech-to-text, LLM, or text-to-speech processing
 - Real-time audio/video synchronization
 - Two-room architecture: separate audio input room and video output conversation
 - No audio echo in the passthrough room
+- React-based fullscreen viewer with auto-connect
 - Configurable sample rate (16kHz input, 24kHz to Tavus)
 
 ## Prerequisites
 
 - Python 3.8+
+- Node.js 18+ and npm
 - A Daily.co account and permanent room URL for audio passthrough
 - Tavus API key and replica ID
-- Pipecat library installed
 
 ## Installation
 
-1. **Create a Daily room for audio passthrough:**
-   - Create a new room (this will be your permanent audio passthrough room)
-   - Copy the room URL (e.g., `https://your-domain.daily.co/your-room`)
-   - This is where you'll join to provide audio input
+### 1. Create a Daily room for audio passthrough
 
-2. Clone or download this project:
+- Go to [daily.co](https://daily.co) and sign up/login
+- Create a new room (this will be your permanent audio passthrough room)
+- Copy the room URL (e.g., `https://your-domain.daily.co/your-room`)
+- This is where you'll join to provide audio input
+
+### 2. Clone this project
+
 ```bash
+git clone <repo-url>
 cd tavus-audio-passthrough
 ```
 
-3. Install dependencies:
+### 3. Install Python dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Configure environment variables:
+**Note:** You may want to use a virtual environment:
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 4. Install Node.js dependencies
+
+Install dependencies for both the launcher and frontend:
+
+```bash
+# Install root dependencies (launcher)
+npm install
+
+# Install frontend dependencies
+cd frontend
+npm install
+cd ..
+```
+
+### 5. Configure environment variables
+
+Create your `.env` file:
+
 ```bash
 cp .env.example .env
 ```
 
-5. Edit `.env` and add your credentials:
-   - `DAILY_ROOM_URL`: Your Daily room URL from step 1 (for audio passthrough)
-   - `TAVUS_API_KEY`: Your Tavus API key
-   - `TAVUS_REPLICA_ID`: Your Tavus replica ID
+Then edit `.env` and add your credentials:
 
-## Usage
+```env
+# Daily.co Configuration
+DAILY_ROOM_URL=https://your-domain.daily.co/your-room
+
+# Tavus API Configuration
+TAVUS_API_KEY=your_tavus_api_key_here
+TAVUS_REPLICA_ID=your_replica_id_here
+```
+
+Replace:
+- `DAILY_ROOM_URL`: Your Daily room URL from step 1
+- `TAVUS_API_KEY`: Your Tavus API key from [Tavus Dashboard](https://tavus.io)
+- `TAVUS_REPLICA_ID`: Your Tavus replica ID
+
+---
+
+**Installation complete!** Now proceed to Quick Start below to run the system.
+
+---
+
+## Quick Start (Recommended)
+
+Once installation is complete, start everything with one command:
+
+```bash
+npm start
+```
+
+### What happens when you run `npm start`:
+
+1. **Python bot starts** - Connects to your Daily room and creates a Tavus conversation
+2. **Conversation URL extracted** - The launcher captures the Tavus URL from bot logs
+3. **Frontend launches** - React app starts on `http://localhost:3000`
+4. **Auto-connect** - Frontend automatically connects to the Tavus replica
+5. **Ready!** - System is running and monitoring for disconnections
+
+### Using the system:
+
+1. **View the replica:**
+   - Open your browser to `http://localhost:3000`
+   - You should see the Tavus replica video (initially static)
+   - At the bottom left, you'll see "Connected to: Tavus Echo Audio Stream"
+
+2. **Provide audio input:**
+   - Open a new tab/window and go to your Daily room URL (from `.env`)
+   - Allow microphone permissions
+   - Start speaking - the replica will animate with your voice!
+
+3. **Stop the system:**
+   - Press `Ctrl+C` in the terminal to stop both bot and frontend
+
+### Expected Terminal Output:
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║          Tavus Audio Passthrough Launcher                    ║
+╚══════════════════════════════════════════════════════════════╝
+
+[Python Bot] Starting...
+[Bot] ᓚᘏᗢ Pipecat 0.0.93...
+[Bot] Creating Tavus conversation...
+[Bot] Created Tavus conversation: {'conversation_url': 'https://tavus.daily.co/xxxxx', ...}
+
+================================================================================
+✓ Tavus Conversation URL: https://tavus.daily.co/xxxxx
+✓ React frontend will auto-connect
+================================================================================
+
+[React Frontend] Starting on http://localhost:3000...
+[Frontend] Local: http://localhost:3000
+
+✓ All services started successfully!
+✓ Bot is capturing audio from Daily room
+✓ Frontend is displaying the Tavus replica
+```
+
+See [LAUNCHER.md](./LAUNCHER.md) for detailed launcher documentation.
+
+## Manual Usage
+
+If you prefer to run components separately:
 
 1. **Start the bot:**
 ```bash
@@ -85,9 +213,8 @@ python main.py
    - Start speaking - your audio is being captured and sent to Tavus
 
 4. **View the animated replica:**
-   - Open the Tavus conversation URL (from step 2) in another browser tab
-   - You'll see the video replica animated with your voice
-   - You won't hear audio echo in your passthrough room
+   - Option A: Open the Tavus conversation URL directly in a browser
+   - Option B: Use the React viewer - `cd frontend && npm run dev`, then paste the URL
 
 ### Workflow Summary
 
@@ -97,6 +224,29 @@ python main.py
 
 - **Audio Input**: Join the Daily room from your `.env` file
 - **Video Output**: Join the Tavus conversation URL logged by the bot
+
+## Frontend Viewer
+
+A React-based viewer app is included in the `frontend/` directory for displaying the Tavus replica in fullscreen.
+
+### Quick Start
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Then open `http://localhost:3000` and paste the Tavus conversation URL from the bot logs.
+
+### Features
+
+- Fullscreen video display
+- Automatic microphone and camera disabling (viewer-only mode)
+- Clean, modern UI
+- No local media access required
+
+See `frontend/README.md` for more details.
 
 ## Configuration
 
@@ -155,19 +305,65 @@ The key difference from the standard example is that we've removed the STT, LLM,
 
 ## Troubleshooting
 
-- **Bot won't start**: Verify your Daily room URL, Tavus API key, and replica ID are correct in `.env`
+### Installation Issues
+
+- **`pip install` fails**:
+  - Make sure you're using Python 3.8+: `python --version`
+  - Try using `python3` instead of `python`
+  - Consider using a virtual environment (see installation step 3)
+
+- **`npm install` fails in frontend**:
+  - Make sure you have Node.js 18+: `node --version`
+  - Delete `node_modules` and `package-lock.json`, then try again
+  - Try `npm install --legacy-peer-deps`
+
+- **Module not found errors**:
+  - Run `npm install` in both root AND frontend directories
+  - Check that you have a `node_modules` folder in both places
+
+### Launcher Issues
+
+- **Launcher only starts frontend (not bot)**:
+  - Make sure you're running `npm start` from the project root, not the `frontend/` directory
+  - Check that `launcher.js` exists in the root directory
+  - Verify `package.json` in root has `"start": "node launcher.js"`
+
+- **Python command not found**:
+  - Try `python3` instead - edit `launcher.js` line 80 to use `'python3'`
+  - Make sure Python is in your PATH
+
+- **Bot won't start**:
+  - Verify your Daily room URL, Tavus API key, and replica ID are correct in `.env`
+  - Make sure `.env` file exists (copy from `.env.example`)
+  - Check Python dependencies are installed
+
+### Runtime Issues
+
 - **No audio captured**:
   - Ensure you've joined the correct Daily room (the one in your `.env`)
   - Check that microphone permissions are granted in your browser
   - Look for "Participant joined" message in the bot logs
+
 - **Video not animating**:
   - Check the logs for Tavus API errors
   - Verify your audio is being captured (check bot debug logs)
-  - Ensure you're viewing the Tavus conversation URL (not the Daily room URL)
+  - Make sure you're speaking into the Daily room (not the Tavus conversation)
+  - The replica will only move when receiving audio input
+
+- **Black screen in browser**:
+  - Check browser console (F12) for errors
+  - Verify you see "Connected to: Tavus Echo Audio Stream" at bottom left
+  - Try clicking on the video (sometimes needs user interaction)
+  - Wait a few seconds for the video track to load
+
 - **Hearing echo**:
-  - Verify `audio_out_enabled=False` in the DailyParams
+  - Verify `audio_out_enabled=False` in main.py:66
   - Make sure you're not in both rooms at the same time
-- **Can't find conversation URL**: Look for the log line containing `Created Tavus conversation` with the `conversation_url` field
+
+- **Can't find conversation URL**:
+  - Look for the green banner in terminal logs with the URL
+  - Check `frontend/src/conversation-url.json` file
+  - Look for log line containing `Created Tavus conversation` with `conversation_url`
 
 ## License
 
@@ -176,11 +372,11 @@ This example is provided as-is for educational purposes.
 ## Architecture Diagram
 
 ```
-┌─────────────┐         ┌──────────────┐         ┌─────────────┐
-│   You in    │         │              │         │   Viewers   │
-│  Daily Room ├────────>│  Pipecat Bot ├────────>│  in Tavus   │
-│   (audio)   │  audio  │              │  video  │  Convo URL  │
-└─────────────┘         └──────┬───────┘         └─────────────┘
+┌─────────────┐         ┌──────────────┐         ┌─────────────────┐
+│   You in    │         │              │         │  React Viewer   │
+│  Daily Room ├────────>│  Pipecat Bot ├────────>│    (localhost)  │
+│   (audio)   │  audio  │              │  video  │  Tavus Convo URL│
+└─────────────┘         └──────┬───────┘         └─────────────────┘
                                │
                                │ Tavus API
                                ▼
@@ -188,6 +384,12 @@ This example is provided as-is for educational purposes.
                         │  Tavus Video │
                         │   Animation  │
                         └──────────────┘
+
+Flow:
+1. You speak in Daily room → Bot captures audio
+2. Bot sends audio to Tavus API → Animates replica
+3. Replica video streams to Tavus conversation URL
+4. React viewer displays fullscreen video (mic/camera disabled)
 ```
 
 ## References
