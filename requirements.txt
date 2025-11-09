@@ -1,0 +1,5 @@
+pipecat-ai
+daily-python
+python-dotenv
+loguru
+aiohttp
