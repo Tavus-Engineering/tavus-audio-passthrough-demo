@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { useDaily, useParticipantIds, useVideoTrack } from '@daily-co/daily-react'
+import { useDaily, useParticipantIds, useVideoTrack, useAudioTrack } from '@daily-co/daily-react'
 
 function VideoPlayer({ roomUrl }) {
   const callObject = useDaily()
   const [isJoining, setIsJoining] = useState(true)
   const [error, setError] = useState(null)
+  const [isMuted, setIsMuted] = useState(true)
   const videoRef = useRef(null)
   const participantIds = useParticipantIds({ filter: 'remote' })
 
@@ -30,6 +31,7 @@ function VideoPlayer({ roomUrl }) {
   }) || participantIds[0]
 
   const videoState = useVideoTrack(replicaId)
+  const audioState = useAudioTrack(replicaId)
 
   // Join the room using the DailyProvider's call object
   useEffect(() => {
@@ -60,31 +62,72 @@ function VideoPlayer({ roomUrl }) {
     joinRoom()
   }, [callObject, roomUrl])
 
-  // Debug video state
+  // Debug video and audio state
   useEffect(() => {
     console.log('Selected replica ID:', replicaId)
     console.log('Video state:', videoState)
-  }, [replicaId, videoState])
+    console.log('Audio state:', audioState)
+  }, [replicaId, videoState, audioState])
 
-  // Attach video track to video element
+  // Attach video and audio tracks to video element
   useEffect(() => {
     if (videoRef.current && videoState?.persistentTrack) {
-      console.log('Attaching video track:', videoState.persistentTrack)
+      console.log('Attaching tracks - Video:', videoState.persistentTrack, 'Audio:', audioState?.persistentTrack)
       const videoEl = videoRef.current
-      videoEl.srcObject = new MediaStream([videoState.persistentTrack])
 
-      // Try to play the video
-      videoEl.play().catch(err => {
-        console.error('Error playing video:', err)
-        // If autoplay fails, add a click handler
-        videoEl.addEventListener('click', () => {
-          videoEl.play()
-        }, { once: true })
-      })
+      // Create MediaStream with both video and audio tracks
+      const tracks = [videoState.persistentTrack]
+      if (audioState?.persistentTrack) {
+        tracks.push(audioState.persistentTrack)
+      }
+
+      videoEl.srcObject = new MediaStream(tracks)
+
+      // Start muted for autoplay
+      videoEl.muted = true
+      videoEl.play()
+        .then(() => {
+          console.log('Video playing (muted)')
+        })
+        .catch(err => {
+          console.error('Error playing video:', err)
+        })
     } else {
-      console.log('No video track available yet', { videoRef: !!videoRef.current, persistentTrack: !!videoState?.persistentTrack })
+      console.log('No video track available yet', {
+        videoRef: !!videoRef.current,
+        videoTrack: !!videoState?.persistentTrack,
+        audioTrack: !!audioState?.persistentTrack
+      })
     }
-  }, [videoState?.persistentTrack])
+  }, [videoState?.persistentTrack, audioState?.persistentTrack])
+
+  // Handle unmute click
+  const handleUnmute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = false
+      setIsMuted(false)
+      videoRef.current.play()
+    }
+  }
+
+  // Auto-unmute on any click or keypress anywhere on the page
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      if (isMuted && videoRef.current && replicaId) {
+        console.log('Auto-unmuting from user interaction')
+        handleUnmute()
+      }
+    }
+
+    // Add listeners for both click and keypress
+    document.addEventListener('click', handleUserInteraction)
+    document.addEventListener('keydown', handleUserInteraction)
+
+    return () => {
+      document.removeEventListener('click', handleUserInteraction)
+      document.removeEventListener('keydown', handleUserInteraction)
+    }
+  }, [isMuted, replicaId])
 
   if (error) {
     return (
@@ -119,12 +162,48 @@ function VideoPlayer({ roomUrl }) {
         ref={videoRef}
         autoPlay
         playsInline
-        muted
         className="replica-video"
       />
+
+      {/* Unmute notification */}
+      {isMuted && replicaId && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '60px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(0, 0, 0, 0.7)',
+            color: 'white',
+            padding: '12px 24px',
+            borderRadius: '30px',
+            fontSize: '14px',
+            fontWeight: '500',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            zIndex: 10,
+            animation: 'pulse 2s ease-in-out infinite'
+          }}
+        >
+          <span style={{ fontSize: '18px' }}>🔊</span>
+          Press any key or click to enable audio
+        </div>
+      )}
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 0.8; }
+          50% { opacity: 1; }
+        }
+      `}</style>
+
+      {/* Status indicator */}
       {replicaId && (
         <div style={{ position: 'absolute', bottom: '10px', left: '10px', color: 'white', background: 'rgba(0,0,0,0.5)', padding: '5px 10px', borderRadius: '5px', fontSize: '12px' }}>
-          Connected to: {callObject?.participants()?.[replicaId]?.user_name || 'Unknown'}
+          Connected to Tavus Network
+          {isMuted && ' (Muted)'}
         </div>
       )}
     </div>
