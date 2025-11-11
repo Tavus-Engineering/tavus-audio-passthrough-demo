@@ -189,7 +189,7 @@ async def main():
         except Exception as e:
             logger.error(f"Pipeline error: {e}")
             # Exit with error code so launcher knows to restart
-            # sys.exit(1)
+            sys.exit(1)
         finally:
             health_task.cancel()
             try:
