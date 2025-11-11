@@ -45,11 +45,19 @@ class AudioToTTSFrameConverter(FrameProcessor):
     so they can be processed by TavusVideoService.
     """
 
+    def __init__(self, activity_callback=None):
+        super().__init__()
+        self.activity_callback = activity_callback
+
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
 
         # Convert incoming audio to TTS format for Tavus
         if isinstance(frame, InputAudioRawFrame):
+            # Update activity timestamp when processing audio
+            if self.activity_callback:
+                self.activity_callback()
+
             tts_frame = TTSAudioRawFrame(
                 audio=frame.audio,
                 sample_rate=frame.sample_rate,
@@ -68,6 +76,11 @@ async def main():
     """
     last_activity_time = asyncio.get_event_loop().time()
     connection_healthy = True
+
+    def update_activity():
+        """Update the last activity timestamp"""
+        nonlocal last_activity_time
+        last_activity_time = asyncio.get_event_loop().time()
 
     async def health_monitor():
         """Monitor connection health and force exit if stuck"""
@@ -114,8 +127,8 @@ async def main():
                 logger.error(f"Tavus internal error: {error}, forcing restart")
                 os._exit(1)
 
-        # Create audio converter
-        converter = AudioToTTSFrameConverter()
+        # Create audio converter with activity callback
+        converter = AudioToTTSFrameConverter(activity_callback=update_activity)
 
         # Create pipeline: input -> converter -> tavus -> output
         # Converter changes InputAudioRawFrame to TTSAudioRawFrame for Tavus
@@ -141,8 +154,7 @@ async def main():
 
         @transport.event_handler("on_first_participant_joined")
         async def on_first_participant_joined(transport, participant):
-            nonlocal last_activity_time
-            last_activity_time = asyncio.get_event_loop().time()
+            update_activity()
             try:
                 await transport.capture_participant_audio(participant["id"])
                 logger.info(f"Participant {participant['id']} joined, starting audio passthrough")
@@ -151,8 +163,7 @@ async def main():
 
         @transport.event_handler("on_participant_left")
         async def on_participant_left(transport, participant, reason):
-            nonlocal last_activity_time
-            last_activity_time = asyncio.get_event_loop().time()
+            update_activity()
             participant_name = participant.get('user_name', 'Unknown')
             logger.info(f"Participant {participant['id']} ({participant_name}) left (reason: {reason})")
 
@@ -163,8 +174,7 @@ async def main():
 
         @transport.event_handler("on_call_state_updated")
         async def on_call_state_updated(transport, state):
-            nonlocal last_activity_time
-            last_activity_time = asyncio.get_event_loop().time()
+            update_activity()
             logger.info(f"Call state updated: {state}")
             # If we get disconnected, exit so launcher can restart
             if state == "left":
