@@ -95,11 +95,11 @@ async def main():
         )
         # Monitor Tavus internal events
         if hasattr(tavus, '_client') and hasattr(tavus._client, 'add_event_handler'):
-            # @Hudson - Your Executive Assistant by Tavus._client.add_event_handler("on_participant_left")
+            @Hudson - Your Executive Assistant by Tavus._client.add_event_handler("on_participant_left")
             async def on_tavus_participant_left(participant):
                 logger.warning(f"Tavus conversation participant left: {participant}, forcing restart")
                 os._exit(1)
-            # @Hudson - Your Executive Assistant by Tavus._client.add_event_handler("on_error")
+            @Hudson - Your Executive Assistant by Tavus._client.add_event_handler("on_error")
             async def on_tavus_error(error):
                 logger.error(f"Tavus internal error: {error}, forcing restart")
                 os._exit(1)
