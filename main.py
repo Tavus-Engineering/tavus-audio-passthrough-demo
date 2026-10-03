@@ -45,11 +45,17 @@ class AudioToTTSFrameConverter(FrameProcessor):
     so they can be processed by TavusVideoService.
     """
 
+    def __init__(self, on_audio=None, **kwargs):
+        super().__init__(**kwargs)
+        self._on_audio = on_audio
+
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
 
         # Convert incoming audio to TTS format for Tavus
         if isinstance(frame, InputAudioRawFrame):
+            if self._on_audio:
+                self._on_audio()
             tts_frame = TTSAudioRawFrame(
                 audio=frame.audio,
                 sample_rate=frame.sample_rate,
@@ -115,7 +121,13 @@ async def main():
                 os._exit(1)
 
         # Create audio converter
-        converter = AudioToTTSFrameConverter()
+        def mark_audio_activity():
+            # Incoming audio proves the connection is alive. Without this the
+            # health monitor kills a healthy call 60s after the last event.
+            nonlocal last_activity_time
+            last_activity_time = asyncio.get_event_loop().time()
+
+        converter = AudioToTTSFrameConverter(on_audio=mark_audio_activity)
 
         # Create pipeline: input -> converter -> tavus -> output
         # Converter changes InputAudioRawFrame to TTSAudioRawFrame for Tavus
